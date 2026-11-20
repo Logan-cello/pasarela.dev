@@ -1,5 +1,5 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
-import { isConnected, requestAccess, getAddress, signTransaction, getNetworkDetails } from '@stellar/freighter-api';
+import { isConnected, requestAccess, getPublicKey, signTransaction, getNetworkDetails } from '@stellar/freighter-api';
 import './style.css';
 
 const $ = (id) => document.getElementById(id);
@@ -38,8 +38,8 @@ async function connect() {
   try {
     if (!await isConnected()) throw new Error('Instala y desbloquea Freighter.');
     const access = await requestAccess();
-    const addressResult = await getAddress();
-    publicKey = access.address || addressResult.address || addressResult;
+    const addressResult = await getPublicKey();
+    publicKey = typeof access === 'string' ? access : (access.address || addressResult);
 
     const network = await getNetworkDetails();
     if (network.networkPassphrase && network.networkPassphrase !== StellarSdk.Networks.TESTNET) {
@@ -171,6 +171,7 @@ $('history-filter').onchange = () => {
   loadHistory();
 };
 $('filter-value').onchange = loadHistory;
+$('cancel-donation').onclick = () => $('donate').close();
 
 $('submit-donation').onclick = async (event) => {
   event.preventDefault();
@@ -210,7 +211,7 @@ $('submit-donation').onclick = async (event) => {
       throw new Error(`Firma rechazada por Freighter: ${error.message || error}`);
     }
 
-    const signedXdr = signed.signedTxXdr || signed;
+    const signedXdr = typeof signed === 'string' ? signed : (signed.signedTxXdr || signed);
     const sent = await rpc().sendTransaction(
       StellarSdk.TransactionBuilder.fromXDR(signedXdr, StellarSdk.Networks.TESTNET)
     );
