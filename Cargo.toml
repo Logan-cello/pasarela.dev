@@ -1,0 +1,10 @@
+[workspace]
+members = ["contracts/donate_gateway"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+soroban-sdk = "22.0.0"
