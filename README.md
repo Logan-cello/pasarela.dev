@@ -42,7 +42,7 @@ TOKEN_ID=C... ./scripts/deploy-testnet.sh
 $env:TOKEN_ID='C...'; .\scripts\deploy-testnet.ps1
 ```
 
-Los scripts compilan, despliegan, inicializan el gateway y crean el cartel `Café del Barrio`. Para una prueba de pago con SAC nativo, asegúrate de que la cuenta donante tenga XLM Testnet. Para un token custom, acuña/asigna saldo antes de pagar según la interfaz de ese token.
+Los scripts compilan, despliegan, inicializan el gateway y crean el cartel `Cafe del Barrio`. Guardan el resultado en `deployments/testnet.json` (`gateway`, `token`, `admin`, `rpc`), que puedes pegar en el formulario del frontend. Para una prueba de pago con SAC nativo, asegúrate de que la cuenta donante tenga XLM Testnet. Para un token custom, acuña/asigna saldo antes de pagar según la interfaz de ese token.
 
 > Los nombres exactos de subcomandos pueden variar entre versiones de Stellar CLI. Comprueba `stellar contract deploy --help` y `stellar contract asset deploy --help`; no uses una clave real en Testnet.
 
@@ -63,7 +63,18 @@ npm install
 npm run dev
 ```
 
-Abre la URL de Vite (normalmente `http://127.0.0.1:5173`), instala/desbloquea Freighter en **Testnet**, pega el `GATEWAY` en el campo, conecta la wallet y recarga/edita el campo para que lea carteles. Pulsa un monto, escribe un mensaje y firma. El frontend simula la operación contra `https://soroban-testnet.stellar.org`, la firma con Freighter, envía y luego consulta el historial.
+Abre `http://127.0.0.1:5173`. **No abras `frontend/index.html` ni `frontend/dist/index.html` con doble clic (`file://`)**: los módulos ES y las llamadas a Soroban requieren un servidor HTTP.
+
+Para revisar el build de producción:
+
+```bash
+npm run build
+npm run preview     # http://127.0.0.1:4173
+```
+
+El CSS se carga con `<link rel="stylesheet" href="./src/style.css">` en `index.html` (independiente del JS) y `vite.config.js` usa `base: './'`, así que el build funciona servido desde cualquier subcarpeta.
+
+Con la app abierta, instala/desbloquea Freighter en **Testnet**, pega el `GATEWAY`, conecta la wallet y edita el campo (o recarga) para leer carteles. Pulsa un monto, escribe un mensaje y firma. El frontend simula contra `https://soroban-testnet.stellar.org`, firma con Freighter, envía y consulta el historial.
 
 Para producción de una demo compartida, añade más carteles con `create_sign` y cambia el RPC desde el campo de configuración. Los montos son unidades base del token (SAC nativo usa 7 decimales).
 

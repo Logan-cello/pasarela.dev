@@ -1,28 +1,73 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: stellar CLI, rustup target wasm32-unknown-unknown, and a funded identity.
-# stellar keys generate deployer --network testnet
-# stellar keys fund deployer --network testnet
+# Despliega el gateway en Stellar Testnet.
+#
+# Requisitos:
+#   cargo (target wasm32-unknown-unknown instalado)
+#   stellar CLI
+#   una identidad financiada:  stellar keys generate deployer --network testnet
+#                              stellar keys fund deployer --network testnet
+#
+# Uso:
+#   TOKEN_ID=C... ./scripts/deploy-testnet.sh
+#   IDENTITY=deployer TOKEN_ID=C... ./scripts/deploy-testnet.sh
 
-NETWORK=testnet
-IDENTITY=${IDENTITY:-deployer}
-WASM=target/wasm32-unknown-unknown/release/donate_gateway.wasm
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
 
+NETWORK="${NETWORK:-testnet}"
+IDENTITY="${IDENTITY:-deployer}"
+WASM="target/wasm32-unknown-unknown/release/donate_gateway.wasm"
+OUT_DIR="deployments"
+
+command -v cargo >/dev/null 2>&1 || { echo "ERROR: cargo no está en PATH."; exit 1; }
+command -v stellar >/dev/null 2>&1 || { echo "ERROR: Stellar CLI no está en PATH."; exit 1; }
+: "${TOKEN_ID:?Define TOKEN_ID con la dirección del token Soroban/SAC (ej: TOKEN_ID=C... ./scripts/deploy-testnet.sh)}"
+
+echo "==> Compilando contrato (wasm32-unknown-unknown, release)"
 cargo build --target wasm32-unknown-unknown --release
-CONTRACT_ID=$(stellar contract deploy --wasm "$WASM" --source "$IDENTITY" --network "$NETWORK")
-echo "GATEWAY_CONTRACT=$CONTRACT_ID"
 
-echo "Deploy or choose a Soroban token (SAC) and set TOKEN_ID. Example:"
-echo "  stellar contract asset deploy --asset native --source $IDENTITY --network $NETWORK"
-: "${TOKEN_ID:?Set TOKEN_ID to a deployed SAC/token contract address}"
+if [[ ! -f "$WASM" ]]; then
+  echo "ERROR: no se generó $WASM"
+  exit 1
+fi
 
-stellar contract invoke --id "$CONTRACT_ID" --source "$IDENTITY" --network "$NETWORK" -- initialize \
-  --admin "$(stellar keys address "$IDENTITY")" --token "$TOKEN_ID"
+echo "==> Desplegando gateway en $NETWORK"
+GATEWAY_ID="$(stellar contract deploy --wasm "$WASM" --source "$IDENTITY" --network "$NETWORK" | tail -n 1 | tr -d '[:space:]')"
 
-# Create a first sign. Amounts are token base units (e.g. 100 = 0.00001 XLM for 7 decimals).
-stellar contract invoke --id "$CONTRACT_ID" --source "$IDENTITY" --network "$NETWORK" -- create_sign \
-  --owner "$(stellar keys address "$IDENTITY")" --receiver "$(stellar keys address "$IDENTITY")" \
-  --title "Café del Barrio" --amounts '[100,500,1000]'
+if [[ -z "$GATEWAY_ID" || "$GATEWAY_ID" != C* ]]; then
+  echo "ERROR: respuesta inesperada de stellar contract deploy: '$GATEWAY_ID'"
+  exit 1
+fi
 
-echo "Copy the gateway address into frontend/index.html or the Gateway contract field."
+ADMIN="$(stellar keys address "$IDENTITY" | tr -d '[:space:]')"
+echo "==> Gateway: $GATEWAY_ID"
+echo "==> Admin:   $ADMIN"
+
+echo "==> Inicializando con token $TOKEN_ID"
+stellar contract invoke --id "$GATEWAY_ID" --source "$IDENTITY" --network "$NETWORK" -- initialize \
+  --admin "$ADMIN" --token "$TOKEN_ID"
+
+# Los montos son unidades base del token (SAC nativo usa 7 decimales).
+echo "==> Creando cartel de ejemplo"
+stellar contract invoke --id "$GATEWAY_ID" --source "$IDENTITY" --network "$NETWORK" -- create_sign \
+  --owner "$ADMIN" --receiver "$ADMIN" \
+  --title "Cafe del Barrio" --amounts '[100,500,1000]'
+
+mkdir -p "$OUT_DIR"
+cat > "$OUT_DIR/testnet.json" <<JSON
+{
+  "network": "testnet",
+  "rpc": "https://soroban-testnet.stellar.org",
+  "gateway": "$GATEWAY_ID",
+  "token": "$TOKEN_ID",
+  "admin": "$ADMIN",
+  "deployedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+JSON
+
+echo
+echo "Listo. Datos guardados en $OUT_DIR/testnet.json"
+echo "GATEWAY_CONTRACT=$GATEWAY_ID"
+echo "Abre http://127.0.0.1:5173 (npm run dev en frontend/) y pega el gateway."
