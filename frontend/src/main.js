@@ -6,6 +6,7 @@ import {
   signTransaction,
   getNetworkDetails,
 } from '@stellar/freighter-api';
+import { initPlaza, updatePlazaCards } from './plaza3d.js';
 
 /*
  * El CSS se carga con <link rel="stylesheet" href="./src/style.css"> en index.html.
@@ -133,6 +134,7 @@ async function loadSigns() {
           ${sign.active && sign.custom_enabled ? `<button type="button" class="custom-button" data-id="${id}" data-custom="true">Monto personalizado</button>` : ''}
         </div>
       </article>`).join('') || '<p>No hay carteles aún. Crea uno con create_sign.</p>';
+    updatePlazaCards(cards);
 
     document.querySelectorAll('.amounts button').forEach((button) => {
       button.onclick = () => openDonate(
@@ -294,6 +296,7 @@ function init() {
     setStatus(`Error de HTML: faltan elementos (${missing.join(', ')}).`, true);
     return;
   }
+  initPlaza({ onSelect: openDonate });
 
   const savedGateway = localStorage.getItem(STORAGE_KEY);
   if (savedGateway && !$('gateway').value) $('gateway').value = savedGateway;

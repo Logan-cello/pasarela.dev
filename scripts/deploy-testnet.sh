@@ -21,6 +21,11 @@ IDENTITY="${IDENTITY:-deployer}"
 WASM="target/wasm32-unknown-unknown/release/donate_gateway.wasm"
 OUT_DIR="deployments"
 
+if [[ "$NETWORK" != "testnet" ]]; then
+  echo "ERROR: este script solo despliega en Stellar Testnet; NETWORK recibido: '$NETWORK'."
+  exit 1
+fi
+
 command -v cargo >/dev/null 2>&1 || { echo "ERROR: cargo no está en PATH."; exit 1; }
 command -v stellar >/dev/null 2>&1 || { echo "ERROR: Stellar CLI no está en PATH."; exit 1; }
 : "${TOKEN_ID:?Define TOKEN_ID con la dirección del token Soroban/SAC (ej: TOKEN_ID=C... ./scripts/deploy-testnet.sh)}"

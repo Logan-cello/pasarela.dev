@@ -9,6 +9,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
 $Network = if ($env:NETWORK) { $env:NETWORK } else { 'testnet' }
+if ($Network -ne 'testnet') { throw "Este script solo despliega en Stellar Testnet; NETWORK recibido: '$Network'." }
 $Identity = if ($env:IDENTITY) { $env:IDENTITY } else { 'deployer' }
 $Token = $env:TOKEN_ID
 $Wasm = 'target/wasm32-unknown-unknown/release/donate_gateway.wasm'
